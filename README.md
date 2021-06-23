@@ -270,25 +270,25 @@ Configuration is actually simple, just read it twice and think twice before chan
 		//Node 1
 		{
 			"name": "mumbai",
-			"url": "http://10.4.1.10:8000",
+			"url": "http://localhost:11211/json_rpc",
 			"timeout": "10s"
 		},
 
 		//Node 2
 		{
 			"name": "backup",
-			"url": "http://10.4.1.11:8545",
+			"url": "http://localhost:11211/json_rpc",
 			"timeout": "10s"
 		}
 	],
 
     //Redis instances
 	"redis": {
-		"endpoint": "10.4.10.100:6379",
+		"endpoint": "localhost:6379",
 		//Increase the pool size if the load is more
 		"poolSize": 10,
 		"database": 8,
-		"password": "9B3D8aD6705d246C82dBaA0DC10D2C7Ce47115Af"
+		"password": ""
 	},
 
 

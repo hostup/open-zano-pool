@@ -46,22 +46,25 @@ func (b Block) Nonce() uint64            { return b.nonce }
 func (b Block) MixDigest() common.Hash   { return b.mixDigest }
 func (b Block) NumberU64() uint64        { return b.number }
 
+
 func (s *ProxyServer) fetchBlockTemplate() {
-	rpc := s.rpc()
+	r := s.rpc()
 	t := s.currentBlockTemplate()
-	pendingReply, height, diff, err := s.fetchPendingBlock()
+	reply, err := r.GetWork(s.config.Proxy.Address)
 	if err != nil {
-		log.Printf("Error while refreshing pending block on %s: %s", rpc.Name, err)
-		return
-	}
-	reply, err := rpc.GetWork()
-	if err != nil {
-		log.Printf("Error while refreshing block template on %s: %s", rpc.Name, err)
+		log.Printf("Error while refreshing block template on %s: %s", r.Name, err)
 		return
 	}
 	// No need to update, we have fresh job
 	if t != nil && t.Header == reply[0] {
 		return
+	}
+	diff := util.TargetHexToDiff(reply[2])
+	height, err := strconv.ParseUint(strings.Replace(reply[3], "0x", "", -1), 16, 64)
+
+	pendingReply := &rpc.GetBlockReplyPart{
+		Difficulty: util.ToHex(s.config.Proxy.Difficulty),
+		Number:     reply[3],
 	}
 
 	pendingReply.Difficulty = util.ToHex(s.config.Proxy.Difficulty)
@@ -71,13 +74,13 @@ func (s *ProxyServer) fetchBlockTemplate() {
 		Seed:                 reply[1],
 		Target:               reply[2],
 		Height:               height,
-		Difficulty:           big.NewInt(diff),
+		Difficulty:           diff,
 		GetPendingBlockCache: pendingReply,
 		headers:              make(map[string]heightDiffPair),
 	}
 	// Copy job backlog and add current one
 	newTemplate.headers[reply[0]] = heightDiffPair{
-		diff:   util.TargetHexToDiff(reply[2]),
+		diff:   diff,
 		height: height,
 	}
 	if t != nil {
@@ -88,7 +91,7 @@ func (s *ProxyServer) fetchBlockTemplate() {
 		}
 	}
 	s.blockTemplate.Store(&newTemplate)
-	log.Printf("New block to mine on %s at height %d / %s", rpc.Name, height, reply[0][0:10])
+	log.Printf("New block to mine on %s at height %d / %s", r.Name, height, reply[0][0:10], diff)
 
 	// Stratum
 	if s.config.Proxy.Stratum.Enabled {

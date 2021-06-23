@@ -38,7 +38,7 @@ type WorkRequestParams struct {
 type GetBlockTemplateReply struct {
   Blob         string   `json:"blocktemplate_blob"`
   Difficulty   string   `json:"difficulty"`
-  Height       string   `json:"height"`
+  Height       uint64   `json:"height"`
   PrevHash     string   `json:"prev_hash"`
   Seed         string   `json:"seed"`
   Status       string   `json:"status"`
@@ -57,9 +57,14 @@ type GetBlockReply struct {
 	SealFields []string `json:"sealFields"`
 }
 
-type GetBlockReplyPart struct {
-	Number     string `json:"number"`
+type GetBlockReplyHeaderPart struct {
+	Number     uint64 `json:"height"`
 	Difficulty string `json:"difficulty"`
+	Hash       string `json:"hash"`
+}
+
+type GetBlockReplyPart struct {
+  BlockHeader GetBlockReplyHeaderPart `json:"block_header"`
 }
 
 const receiptStatusSuccessful = "0x1"
@@ -104,7 +109,7 @@ func NewRPCClient(name, url, timeout string) *RPCClient {
 	return rpcClient
 }
 
-func (r *RPCClient) GetWork(miner_address string) ([]string, error) {
+func (r *RPCClient) GetWork(miner_address string) (*GetBlockTemplateReply, error) {
   var wparams WorkRequestParams
   wparams.ExtraText = "open-zano-pool"
   wparams.WalletAddress = miner_address
@@ -112,17 +117,17 @@ func (r *RPCClient) GetWork(miner_address string) ([]string, error) {
   wparams.PosBlock = false
   wparams.PosAmount = 0
   wparams.PosIndex = 0
-	rpcResp, err := r.doPost(r.Url, "getblocktemplate", []interface{}{wparams})
+	rpcResp, err := r.doPost(r.Url, "getblocktemplate", wparams)
 	if err != nil {
 		return nil, err
 	}
-	var reply []string
+	var reply *GetBlockTemplateReply
 	err = json.Unmarshal(*rpcResp.Result, &reply)
 	return reply, err
 }
 
-func (r *RPCClient) GetPendingBlock() (*GetBlockReplyPart, error) {
-	rpcResp, err := r.doPost(r.Url, "eth_getBlockByNumber", []interface{}{"pending", false})
+func (r *RPCClient) GetLatestBlock() (*GetBlockReplyPart, error) {
+	rpcResp, err := r.doPost(r.Url, "getlastblockheader", []string{})
 	if err != nil {
 		return nil, err
 	}

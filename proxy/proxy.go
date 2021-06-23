@@ -63,6 +63,8 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
   }
   cfg.Proxy.Address = address
 
+	  log.Printf("Address %v %v", address, cfg.Proxy.Address)
+
 	if len(cfg.Name) == 0 {
 		log.Fatal("You must set instance name")
 	}

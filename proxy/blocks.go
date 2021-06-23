@@ -4,13 +4,11 @@ import (
 	"log"
 	"math/big"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/hostup/open-zano-pool/rpc"
-	"github.com/hostup/open-zano-pool/util"
 )
 
 const maxBacklog = 3
@@ -27,7 +25,7 @@ type BlockTemplate struct {
 	Target               string
 	Difficulty           *big.Int
 	Height               uint64
-	GetPendingBlockCache *rpc.GetBlockReplyPart
+	GetLatestBlockCache *rpc.GetBlockReplyHeaderPart
 	nonces               map[string]bool
 	headers              map[string]heightDiffPair
 }
@@ -50,36 +48,42 @@ func (b Block) NumberU64() uint64        { return b.number }
 func (s *ProxyServer) fetchBlockTemplate() {
 	r := s.rpc()
 	t := s.currentBlockTemplate()
-	reply, err := r.GetWork(s.config.Proxy.Address)
+	replyLastBlock, err := r.GetLatestBlock()
 	if err != nil {
 		log.Printf("Error while refreshing block template on %s: %s", r.Name, err)
 		return
 	}
 	// No need to update, we have fresh job
-	if t != nil && t.Header == reply[0] {
+	if t != nil && t.Header == replyLastBlock.BlockHeader.Hash {
 		return
 	}
-	diff := util.TargetHexToDiff(reply[2])
-	height, err := strconv.ParseUint(strings.Replace(reply[3], "0x", "", -1), 16, 64)
+  reply, err := r.GetWork(s.config.Proxy.Address)
+  if err != nil {
+    log.Printf("Error while refreshing block template on %s: %s", r.Name, err)
+    return
+  }
 
-	pendingReply := &rpc.GetBlockReplyPart{
-		Difficulty: util.ToHex(s.config.Proxy.Difficulty),
-		Number:     reply[3],
+  log.Printf("lastblock.Hash (%v) getwork.PrevHash (%v)", replyLastBlock.BlockHeader.Hash, reply.PrevHash)
+
+  diff, _ := new(big.Int).SetString(reply.Difficulty, 10)
+	height := reply.Height
+
+	pendingReply := &rpc.GetBlockReplyHeaderPart{
+		Difficulty: strconv.FormatInt(s.config.Proxy.Difficulty, 10),
+		Number:     reply.Height,
 	}
 
-	pendingReply.Difficulty = util.ToHex(s.config.Proxy.Difficulty)
-
 	newTemplate := BlockTemplate{
-		Header:               reply[0],
-		Seed:                 reply[1],
-		Target:               reply[2],
+		Header:               reply.PrevHash,
+		Seed:                 reply.Seed,
+		Target:               reply.Blob,
 		Height:               height,
 		Difficulty:           diff,
-		GetPendingBlockCache: pendingReply,
+		GetLatestBlockCache: pendingReply,
 		headers:              make(map[string]heightDiffPair),
 	}
 	// Copy job backlog and add current one
-	newTemplate.headers[reply[0]] = heightDiffPair{
+	newTemplate.headers[reply.PrevHash] = heightDiffPair{
 		diff:   diff,
 		height: height,
 	}
@@ -91,7 +95,7 @@ func (s *ProxyServer) fetchBlockTemplate() {
 		}
 	}
 	s.blockTemplate.Store(&newTemplate)
-	log.Printf("New block to mine on %s at height %d / %s", r.Name, height, reply[0][0:10], diff)
+	log.Printf("New block to mine on %s at height %d / %s", r.Name, height, reply.Blob[28:38], diff)
 
 	// Stratum
 	if s.config.Proxy.Stratum.Enabled {
@@ -105,24 +109,4 @@ func (s *ProxyServer) fetchBlockTemplate() {
 	if s.config.Proxy.StratumNiceHash.Enabled {
 		go s.broadcastNewJobsNH()
 	}
-}
-
-func (s *ProxyServer) fetchPendingBlock() (*rpc.GetBlockReplyPart, uint64, int64, error) {
-	rpc := s.rpc()
-	reply, err := rpc.GetPendingBlock()
-	if err != nil {
-		log.Printf("Error while refreshing pending block on %s: %s", rpc.Name, err)
-		return nil, 0, 0, err
-	}
-	blockNumber, err := strconv.ParseUint(strings.Replace(reply.Number, "0x", "", -1), 16, 64)
-	if err != nil {
-		log.Println("Can't parse pending block number")
-		return nil, 0, 0, err
-	}
-	blockDiff, err := strconv.ParseInt(strings.Replace(reply.Difficulty, "0x", "", -1), 16, 64)
-	if err != nil {
-		log.Println("Can't parse pending block difficulty")
-		return nil, 0, 0, err
-	}
-	return reply, blockNumber, blockDiff, nil
 }

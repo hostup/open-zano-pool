@@ -37,6 +37,7 @@ type WorkRequestParams struct {
 
 type GetBlockTemplateReply struct {
   Blob         string   `json:"blocktemplate_blob"`
+  Header       string   `json:"blocktemplate_work"`
   Difficulty   string   `json:"difficulty"`
   Height       uint64   `json:"height"`
   PrevHash     string   `json:"prev_hash"`
@@ -57,14 +58,20 @@ type GetBlockReply struct {
 	SealFields []string `json:"sealFields"`
 }
 
-type GetBlockReplyHeaderPart struct {
-	Number     uint64 `json:"height"`
-	Difficulty string `json:"difficulty"`
-	Hash       string `json:"hash"`
+type GetBlockReplyHeaderPartRaw struct {
+  Number     uint64 `json:"height"`
+  Difficulty string `json:"difficulty"`
+  Hash       string `json:"hash"`
 }
 
 type GetBlockReplyPart struct {
-  BlockHeader GetBlockReplyHeaderPart `json:"block_header"`
+	Number     string `json:"number"`
+	Difficulty string `json:"difficulty"`
+  Hash       string `json:"hash"`
+}
+
+type GetBlockReplyPartRaw struct {
+  BlockHeader GetBlockReplyHeaderPartRaw `json:"block_header"`
 }
 
 const receiptStatusSuccessful = "0x1"
@@ -109,7 +116,7 @@ func NewRPCClient(name, url, timeout string) *RPCClient {
 	return rpcClient
 }
 
-func (r *RPCClient) GetWork(miner_address string) (*GetBlockTemplateReply, error) {
+func (r *RPCClient) GetWork(miner_address string) ([]string, error) {
   var wparams WorkRequestParams
   wparams.ExtraText = "open-zano-pool"
   wparams.WalletAddress = miner_address
@@ -121,9 +128,33 @@ func (r *RPCClient) GetWork(miner_address string) (*GetBlockTemplateReply, error
 	if err != nil {
 		return nil, err
 	}
-	var reply *GetBlockTemplateReply
-	err = json.Unmarshal(*rpcResp.Result, &reply)
+	var replyJson *GetBlockTemplateReply
+	err = json.Unmarshal(*rpcResp.Result, &replyJson)
+
+  reply := []string{
+    replyJson.Header,
+    "0x" + replyJson.Seed,
+    util.GetTargetHexFromString(replyJson.Difficulty),
+    util.ToHexUint(replyJson.Height),
+    "0x" + replyJson.Blob,
+  }
 	return reply, err
+}
+
+func (r * RPCClient) VerifySolution(params []string) (*bool, error) {
+  rpcResp, err := r.doPost(r.Url, "checksolution", params)
+  if err != nil {
+    return nil, err
+  }
+  if rpcResp.Result != nil {
+    var reply *bool
+    err = json.Unmarshal(*rpcResp.Result, &reply)
+    if err != nil {
+      return nil, err
+    }
+    return reply, err
+  }
+  return nil, nil
 }
 
 func (r *RPCClient) GetLatestBlock() (*GetBlockReplyPart, error) {
@@ -132,8 +163,15 @@ func (r *RPCClient) GetLatestBlock() (*GetBlockReplyPart, error) {
 		return nil, err
 	}
 	if rpcResp.Result != nil {
-		var reply *GetBlockReplyPart
-		err = json.Unmarshal(*rpcResp.Result, &reply)
+		var replyRaw *GetBlockReplyPartRaw
+		err = json.Unmarshal(*rpcResp.Result, &replyRaw)
+		if err != nil {
+      return nil, err
+    }
+    var reply = new(GetBlockReplyPart)
+    reply.Number = util.ToHexUint(replyRaw.BlockHeader.Number)
+    reply.Difficulty = replyRaw.BlockHeader.Difficulty
+    reply.Hash = replyRaw.BlockHeader.Hash
 		return reply, err
 	}
 	return nil, nil
@@ -181,7 +219,7 @@ func (r *RPCClient) GetTxReceipt(hash string) (*TxReceipt, error) {
 }
 
 func (r *RPCClient) SubmitBlock(params []string) (bool, error) {
-	rpcResp, err := r.doPost(r.Url, "eth_submitWork", params)
+	rpcResp, err := r.doPost(r.Url, "submitblock", params)
 	if err != nil {
 		return false, err
 	}

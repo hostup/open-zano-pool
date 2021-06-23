@@ -15,7 +15,7 @@ module.exports = function (environment) {
 
         APP: {
             // API host and port
-            ApiUrl: '//eth.daggerpool.com/',
+            ApiUrl: 'localhost:8081',
 
             // HTTP mining endpoint
             HttpHost: 'http://eth-us01.daggerpool.com',

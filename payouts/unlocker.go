@@ -266,7 +266,7 @@ func (u *BlockUnlocker) unlockPendingBlocks() {
 		log.Printf("Unable to get current blockchain height from node: %v", err)
 		return
 	}
-	currentHeight := int64(current.BlockHeader.Number)
+	currentHeight, err := strconv.ParseInt(strings.Replace(current.Number, "0x", "", -1), 16, 64)
 	if err != nil {
 		u.halt = true
 		u.lastFail = err
@@ -378,7 +378,7 @@ func (u *BlockUnlocker) unlockAndCreditMiners() {
 		log.Printf("Unable to get current blockchain height from node: %v", err)
 		return
 	}
-	currentHeight := int64(current.BlockHeader.Number)
+	currentHeight, err := strconv.ParseInt(strings.Replace(current.Number, "0x", "", -1), 16, 64)
 	if err != nil {
 		u.halt = true
 		u.lastFail = err

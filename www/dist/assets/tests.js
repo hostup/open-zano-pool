@@ -464,7 +464,7 @@ define('open-ethereum-pool/tests/test-helper.jshint', ['exports'], function (exp
 });
 /* jshint ignore:start */
 
-require('open-ethereum-pool/tests/test-helper');
+require('open-zano-pool/tests/test-helper');
 EmberENV.TESTS_FILE_LOADED = true;
 
 /* jshint ignore:end */

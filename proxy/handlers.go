@@ -3,7 +3,6 @@ package proxy
 import (
 	"log"
 	"regexp"
-	"strings"
 
 	"github.com/hostup/open-zano-pool/rpc"
 	"github.com/hostup/open-zano-pool/util"
@@ -22,8 +21,8 @@ func (s *ProxyServer) handleLoginRPC(cs *Session, params []string, id string) (b
 
 	//Parse email Id here
 	//TODO: LOGIN CHECK OF VALID ID
-	login := strings.ToLower(params[0])
-	if !util.IsValidHexAddress(login) {
+	login := params[0]
+	if !util.IsValidZanoAddress(login) {
 		return false, &ErrorReply{Code: -1, Message: "Invalid login"}
 	}
 	if !s.policy.ApplyLoginPolicy(login, cs.ip) {

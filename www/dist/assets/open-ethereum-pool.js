@@ -10618,8 +10618,8 @@ define('open-ethereum-pool/utils/intl/missing-message', ['exports', 'ember', 'em
 
 /* jshint ignore:start */
 
-define('open-ethereum-pool/config/environment', ['ember'], function(Ember) {
-  var prefix = 'open-ethereum-pool';
+define('open-zano-pool/config/environment', ['ember'], function(Ember) {
+  var prefix = 'open-zano-pool';
 /* jshint ignore:start */
 
 try {
@@ -10646,7 +10646,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("open-ethereum-pool/app")["default"].create({"ApiUrl":"https://eth.daggerpool.com/","HttpHost":"http://eth-us01.daggerpool.com","HttpPort":40001,"StratumHost":"eth-us01.daggerpool.com","StratumPort":40011,"StratumHost1":"eth-uk01.daggerpool.com","StratumPort1":40011,"NicehashHost":"eth-nh.daggerpool.com","NicehashPost":40021,"PoolFee":"0.99%","PayoutThreshold":"0.01","ShareDifficulty":"4000000000","Currency":"USD","CoinName":"Ethereum","CoinShortName":"ETH","PaymentText":"every 2 hours","SupportMail":"helpdesk@daggerpool.com","SupportHelpdesk":"http://helpdesk.daggerpool.com","WebsiteName":"eth.daggerpool.com","ChainAddress":"https://etherscan.io/address/","TransactionAddress":"https://etherscan.io/tx/","UncleAddress":"https://etherscan.io/uncle/","BlockAddress":"https://etherscan.io/block/","TwitterURL":"https://twitter.com/","TwitterHash":"daggerpool_com","BlockTime":15,"name":"open-ethereum-pool","version":"0.0.0+efc12091"});
+  require("open-zano-pool/app")["default"].create({"ApiUrl":"https://eth.daggerpool.com/","HttpHost":"http://eth-us01.daggerpool.com","HttpPort":40001,"StratumHost":"localhost","StratumPort":40011,"StratumHost1":"localhost","StratumPort1":40011,"NicehashHost":"localhost","NicehashPost":40021,"PoolFee":"0.99%","PayoutThreshold":"0.01","ShareDifficulty":"4000000000","Currency":"USD","CoinName":"zano","CoinShortName":"zano","PaymentText":"every 2 hours","SupportMail":"helpdesk@daggerpool.com","SupportHelpdesk":"http://helpdesk.daggerpool.com","WebsiteName":"eth.daggerpool.com","ChainAddress":"https://etherscan.io/address/","TransactionAddress":"https://etherscan.io/tx/","UncleAddress":"https://etherscan.io/uncle/","BlockAddress":"https://etherscan.io/block/","TwitterURL":"https://twitter.com/","TwitterHash":"daggerpool_com","BlockTime":15,"name":"open-ethereum-pool","version":"0.0.0+b5b42544"});
 }
 
 /* jshint ignore:end */

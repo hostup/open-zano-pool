@@ -2,7 +2,7 @@
 
 module.exports = function (environment) {
     var ENV = {
-        modulePrefix: 'open-ethereum-pool',
+        modulePrefix: 'open-zano-pool',
         environment: environment,
         rootURL: '/',
         locationType: 'hash',
@@ -15,20 +15,20 @@ module.exports = function (environment) {
 
         APP: {
             // API host and port
-            ApiUrl: 'localhost:8081',
+            ApiUrl: 'http://localhost:8081',
 
             // HTTP mining endpoint
             HttpHost: 'http://eth-us01.daggerpool.com',
             HttpPort: 40001,
 
             // Stratum mining endpoint
-            StratumHost: 'eth-us01.daggerpool.com',
+            StratumHost: 'localhost',
             StratumPort: 40011,
 
-            StratumHost1: 'eth-uk01.daggerpool.com',
+            StratumHost1: 'localhost',
             StratumPort1: 40011,
 
-            NicehashHost: 'eth-nh.daggerpool.com',
+            NicehashHost: 'localhost',
             NicehashPost: 40021,
 
             // Fee and payout details
@@ -38,8 +38,8 @@ module.exports = function (environment) {
 
             //Current and Localization
             Currency: 'USD',
-            CoinName: 'Ethereum',
-            CoinShortName: 'ETH',
+            CoinName: 'zano',
+            CoinShortName: 'zano',
             PaymentText: 'every 2 hours',
             SupportMail: 'helpdesk@daggerpool.com',
             SupportHelpdesk: 'http://helpdesk.daggerpool.com',

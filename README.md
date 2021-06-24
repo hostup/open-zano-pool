@@ -1,6 +1,6 @@
 # Ethash-mining-pool
 Highly Efficient mining pool designed for Ethash based coins
-[![Build Status](https://travis-ci.org/hostup/open-zano-pool.svg?branch=V2.0_Eth)](https://travis-ci.org/hostup/open-zano-pool) 
+[![Build Status](https://travis-ci.org/hostup/open-zano-pool.svg?branch=V2.0_Eth)](https://travis-ci.org/hostup/open-zano-pool)
 
 
 ![alt text](https://raw.githubusercontent.com/hostup/open-zano-pool/master/images/FrontEnd.png)
@@ -22,7 +22,7 @@ Highly Efficient mining pool designed for Ethash based coins
 *	Reengineered most of the code for efficiency and Scaling
 *	New Dynamic PPLNS Reward System
 *	Integration with the Exchange to get real-time conversion between crypto and fiat.
-*	The Network fees can be configured to be withheld for every transfers. 
+*	The Network fees can be configured to be withheld for every transfers.
 *	The gas can be set as Auto and made to deduct automatically or can be fixed by the pool operator
 *	Many parameters configurable using config file
 *	Nicehash support *Not tested
@@ -30,7 +30,7 @@ Highly Efficient mining pool designed for Ethash based coins
 *	Very attractive frontend with more detailed statistics
 
 
-### Branches 
+### Branches
 **Please clone the project using the branches as  per the coin
 
 * V2.0_Eth – Ethereum pool for go version <=1.10
@@ -77,18 +77,18 @@ Install redis-server.
 
 ### Building Frontend
 
-There are 2 front end application. 
+There are 2 front end application.
 * One for showing the consolidated view of different pool statistics
 * Another for single coin frontend.
 
 You may choose your desired one
-To show the statistics for one coin (Front end api) : https://github.com/techievee/statistics_api 
+To show the statistics for one coin (Front end api) : https://github.com/techievee/statistics_api
 To show the consolidated statistics for all the coins that were implemented : https://github.com/techievee/generalapi
 
 The frontend is a single-page Ember.js application that polls the pool API to render miner stats.
 Please refer the frontend application Readme.md for more information. Those frontend are not compliant to sammy007 versions
 
-### DPPLNS ALGORITHM (NEW) 
+### DPPLNS ALGORITHM (NEW)
 
 The algorithm explanation is as follows
 
@@ -101,9 +101,9 @@ If present
 	Calculate the N value by (2* Network difficulty)/ Share difficulty
  	Set the last N value in the statistics hash key
 Else
-	Fix the predetermined standard ‘N’ value from the block chain	
+	Fix the predetermined standard ‘N’ value from the block chain
 ```
-Space : O(1)	
+Space : O(1)
 RunTime : O(1)
 
 * ADJUSTING THE ‘N’ SHARES
@@ -118,7 +118,7 @@ If lastNShare< count
        end
 ```
 
-Space : O(1)	
+Space : O(1)
 RunTime : O(N)
 
 * NEW SHARE SUBMISSION
@@ -134,21 +134,21 @@ Else
 Adjust the value of ‘N’ shares
 ```
 
-Space : O(1)	
+Space : O(1)
 RunTime : O(1)
 
 * REWARD CALUCLATION USING DPPLNS
 ```javascript
 Loop(lastNshare )
 		Get the miners address from list
-Increment the local miners current round share 
+Increment the local miners current round share
        End
 Loop(miners of current round)
 		Percentage= minersshare / current round share
 End
 ```
 
-Space : O(N)	
+Space : O(N)
 RunTime : O(N)
 
 
@@ -161,7 +161,7 @@ Configuration is actually simple, just read it twice and think twice before chan
 	//Number of Go process to be used for running this software
 	"threads": 2,
 	// Used for prepend Redis instance
-	"coin": "ethereum-pplns",
+	"coin": "zano",
 
 	"name": "main",
 
@@ -372,9 +372,3 @@ Configuration is actually simple, just read it twice and think twice before chan
 ### Sample VM Configurations
 
 ![Configuration](https://raw.githubusercontent.com/hostup/open-zano-pool/master/images/Configurations.PNG)
-
-
-
-
-
-

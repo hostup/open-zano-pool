@@ -1,6 +1,6 @@
 {
 	"threads": 2,
-	"coin": "ethereum-pplns",
+	"coin": "zano",
 	"name": "main",
 	"pplns": 1000000,
 	"coin-name":"zano",
@@ -90,13 +90,13 @@
 
 	"unlocker": {
 		"enabled": true,
-		"poolFee": 0.99,
+		"poolFee": 0.5,
 		"poolFeeAddress": "ZxCwg6nmW8QPoa6qZomGwXhP4eUcCLN3waKtyTZkKtsyC9rZwPGo7LC1CGnURw3rPvLzuje86fPNTVZmEJUt6gvR3AhkohMHY",
 		"donate": false,
-		"depth": 120,
-		"immatureDepth": 20,
+		"depth": 100,
+		"immatureDepth": 16,
 		"keepTxFees": false,
-		"interval": "15m",
+		"interval": "30s",
 		"daemon": "http://127.0.0.1:11211/json_rpc",
 		"timeout": "10s"
 	},

@@ -91,7 +91,7 @@
 	"unlocker": {
 		"enabled": false,
 		"poolFee": 0.9,
-		"poolFeeAddress": "0x9dbe1caae874baae91022d170fba246100c73286",
+		"poolFeeAddress": "ZxCwg6nmW8QPoa6qZomGwXhP4eUcCLN3waKtyTZkKtsyC9rZwPGo7LC1CGnURw3rPvLzuje86fPNTVZmEJUt6gvR3AhkohMHY",
 		"donate": false,
 		"depth": 120,
 		"immatureDepth": 20,
@@ -107,7 +107,7 @@
 		"interval": "120m",
 		"daemon": "http://zano-svc:11211/json_rpc",
 		"timeout": "10s",
-		"address": "0xff2a46e45df2b49f388f523b43153c38079237d9",
+		"address": "ZxCwg6nmW8QPoa6qZomGwXhP4eUcCLN3waKtyTZkKtsyC9rZwPGo7LC1CGnURw3rPvLzuje86fPNTVZmEJUt6gvR3AhkohMHY",
 		"gas": "21000",
 		"gasPrice": "20000000000",
 		"autoGas": true,

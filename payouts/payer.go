@@ -22,6 +22,7 @@ type PayoutsConfig struct {
 	RequirePeers int64  `json:"requirePeers"`
 	Interval     string `json:"interval"`
 	Daemon       string `json:"daemon"`
+  Wallet       string `json:"wallet"`
 	Timeout      string `json:"timeout"`
 	Address      string `json:"address"`
 	Gas          string `json:"gas"`
@@ -46,17 +47,19 @@ func (self PayoutsConfig) GasPriceHex() string {
 }
 
 type PayoutsProcessor struct {
-	config   *PayoutsConfig
-	backend  *storage.RedisClient
-	rpc      *rpc.RPCClient
-	halt     bool
-	lastFail error
+	config     *PayoutsConfig
+	backend    *storage.RedisClient
+	rpc_daemon *rpc.RPCClient
+  rpc_wallet *rpc.RPCClient
+	halt       bool
+	lastFail   error
 }
 
 func NewPayoutsProcessor(cfg *PayoutsConfig, backend *storage.RedisClient) *PayoutsProcessor {
 	u := &PayoutsProcessor{config: cfg, backend: backend}
-	u.rpc = rpc.NewRPCClient("PayoutsProcessor", cfg.Daemon, cfg.Timeout)
-	return u
+	u.rpc_daemon = rpc.NewRPCClient("PayoutsDaemon", cfg.Daemon, cfg.Timeout)
+	  u.rpc_wallet = rpc.NewRPCClient("PayoutsWallet", cfg.Wallet, cfg.Timeout)
+	  return u
 }
 
 func (u *PayoutsProcessor) Start() {
@@ -147,7 +150,7 @@ func (u *PayoutsProcessor) process() {
 
 		// Check if we have enough funds
 		poolAddress := os.Getenv(u.config.Address)
- 		poolBalance, err := u.rpc.GetBalance(poolAddress)
+ 		poolBalance, err := u.rpc_wallet.GetBalance(poolAddress)
 		if err != nil {
 			u.halt = true
 			u.lastFail = err
@@ -195,7 +198,7 @@ func (u *PayoutsProcessor) process() {
 		}
 
 		value := hexutil.EncodeBig(amountInWei)
-		txHash, err := u.rpc.SendTransaction(u.config.Address, login, u.config.GasHex(), u.config.GasPriceHex(), value, u.config.AutoGas)
+		txHash, err := u.rpc_wallet.SendTransaction(u.config.Address, login, u.config.GasHex(), u.config.GasPriceHex(), value, u.config.AutoGas)
 
 		if err != nil {
 			log.Printf("Failed to send payment to %s, %v Shannon: %v. Check outgoing tx for %s in block explorer and docs/PAYOUTS.md",
@@ -222,7 +225,7 @@ func (u *PayoutsProcessor) process() {
 		for {
 			log.Printf("Waiting for tx confirmation: %v", txHash)
 			time.Sleep(txCheckInterval)
-			receipt, err := u.rpc.GetTxReceipt(txHash)
+			receipt, err := u.rpc_wallet.GetTxReceipt(txHash)
 			if err != nil {
 				log.Printf("Failed to get tx receipt for %v: %v", txHash, err)
 				continue
@@ -252,7 +255,7 @@ func (u *PayoutsProcessor) process() {
 }
 
 func (self PayoutsProcessor) isUnlockedAccount() bool {
-	_, err := self.rpc.Sign(self.config.Address, "0x0")
+	_, err := self.rpc_wallet.Sign(self.config.Address, "0x0")
 	if err != nil {
 		log.Println("Unable to process payouts:", err)
 		return false
@@ -261,7 +264,7 @@ func (self PayoutsProcessor) isUnlockedAccount() bool {
 }
 
 func (self PayoutsProcessor) checkPeers() bool {
-	n, err := self.rpc.GetPeerCount()
+	n, err := self.rpc_daemon.GetPeerCount()
 	if err != nil {
 		log.Println("Unable to start payouts, failed to retrieve number of peers from node:", err)
 		return false

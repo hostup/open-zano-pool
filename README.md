@@ -300,7 +300,7 @@ Configuration is actually simple, just read it twice and think twice before chan
 		"poolFee": 0.99,
 
 		//Where the pool fee need to be transferred, Leave it blank to retain it in pool mining address
-		"poolFeeAddress": "0x9dbe1caae874baae91022d170fba246100c73286",
+		"poolFeeAddress": "ZxCwg6nmW8QPoa6qZomGwXhP4eUcCLN3waKtyTZkKtsyC9rZwPGo7LC1CGnURw3rPvLzuje86fPNTVZmEJUt6gvR3AhkohMHY",
 
 		"donate": false,
 
@@ -313,7 +313,7 @@ Configuration is actually simple, just read it twice and think twice before chan
 		//Do you need to retain the network fees?
 		"keepTxFees": false,
 		"interval": "15m",
-		"daemon": "http://127.0.0.1:8880",
+		"daemon": "http://127.0.0.1:11211/json_rpc",
 		"timeout": "10s"
 	},
 
@@ -327,11 +327,11 @@ Configuration is actually simple, just read it twice and think twice before chan
 		"interval": "120m",
 
 		//Node where the Payout instance is running with payout address unlocked ( BE CAREFUL)
-		"daemon": "http://127.0.0.1:8880",
+		"daemon": "http://127.0.0.1:11211/json_rpc",
 		"timeout": "10s",
 
 		//Address from the Rewards are paid
-		"address": "0xff2a46e45df2b49f388f523b43153c38079237d9",
+		"address": "ZxCwg6nmW8QPoa6qZomGwXhP4eUcCLN3waKtyTZkKtsyC9rZwPGo7LC1CGnURw3rPvLzuje86fPNTVZmEJUt6gvR3AhkohMHY",
 
 		//Predefined Gas and GasPrice, if the autogas is not enabled.
 		"gas": "21000",

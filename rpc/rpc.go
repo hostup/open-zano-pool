@@ -44,11 +44,29 @@ type GetBlockTemplateReply struct {
   Seed         string   `json:"seed"`
   Status       string   `json:"status"`
 }
+
+type GetBlockHeader struct {
+  Depth        uint64 `json:"depth"`
+  Difficulty   string `json:"difficulty"`
+  Hash         string `json:"hash"`
+  Height       uint64 `json:"height"`
+  Nonce        uint64 `json:"nonce"`
+  OrphanStatus bool   `json:"orphan_status"`
+  Reward       uint64 `json:"reward"`
+  Timestamp    uint64 `json:"timestamp"`
+}
+
+type GetBlockHeaderReply struct {
+  BlockHeader GetBlockHeader `json:"block_header"`
+}
+
 type GetBlockReply struct {
 	Number       string   `json:"number"`
 	Hash         string   `json:"hash"`
 	Nonce        string   `json:"nonce"`
 	Miner        string   `json:"miner"`
+	Reward       uint64   `json:"reward"`
+  OrphanStatus bool     `json:"orphan_status"`
 	Difficulty   string   `json:"difficulty"`
 	GasLimit     string   `json:"gasLimit"`
 	GasUsed      string   `json:"gasUsed"`
@@ -72,6 +90,10 @@ type GetBlockReplyPart struct {
 
 type GetBlockReplyPartRaw struct {
   BlockHeader GetBlockReplyHeaderPartRaw `json:"block_header"`
+}
+
+type SubmitBlockReply struct {
+  Status string `json:"status"`
 }
 
 const receiptStatusSuccessful = "0x1"
@@ -147,8 +169,8 @@ func (r * RPCClient) VerifySolution(params []string) (*bool, error) {
     return nil, err
   }
   if rpcResp.Result != nil {
-    var reply *bool
-    err = json.Unmarshal(*rpcResp.Result, &reply)
+		reply := new(bool)
+    *reply, _ = strconv.ParseBool(string(*rpcResp.Result))
     if err != nil {
       return nil, err
     }
@@ -178,13 +200,13 @@ func (r *RPCClient) GetLatestBlock() (*GetBlockReplyPart, error) {
 }
 
 func (r *RPCClient) GetBlockByHeight(height int64) (*GetBlockReply, error) {
-	params := []interface{}{fmt.Sprintf("0x%x", height), true}
-	return r.getBlockBy("eth_getBlockByNumber", params)
+	params := map[string]int64{"height": height}
+	return r.getBlockBy("getblockheaderbyheight", params)
 }
 
 func (r *RPCClient) GetBlockByHash(hash string) (*GetBlockReply, error) {
-	params := []interface{}{hash, true}
-	return r.getBlockBy("eth_getBlockByHash", params)
+	params := map[string]string{"hash": hash}
+	return r.getBlockBy("getblockheaderbyhash", params)
 }
 
 func (r *RPCClient) GetUncleByBlockNumberAndIndex(height int64, index int) (*GetBlockReply, error) {
@@ -192,15 +214,24 @@ func (r *RPCClient) GetUncleByBlockNumberAndIndex(height int64, index int) (*Get
 	return r.getBlockBy("eth_getUncleByBlockNumberAndIndex", params)
 }
 
-func (r *RPCClient) getBlockBy(method string, params []interface{}) (*GetBlockReply, error) {
+func (r *RPCClient) getBlockBy(method string, params interface{}) (*GetBlockReply, error) {
 	rpcResp, err := r.doPost(r.Url, method, params)
 	if err != nil {
 		return nil, err
 	}
 	if rpcResp.Result != nil {
-		var reply *GetBlockReply
+		var reply *GetBlockHeaderReply
 		err = json.Unmarshal(*rpcResp.Result, &reply)
-		return reply, err
+
+		    out := new(GetBlockReply)
+		    out.Number = util.ToHexUint(reply.BlockHeader.Height)
+		    out.Hash = "0x" + reply.BlockHeader.Hash
+		    out.Nonce = util.ToHexUintNoPad(reply.BlockHeader.Nonce)
+		    out.Miner = ""
+		    out.Difficulty = reply.BlockHeader.Difficulty
+		    out.Reward = reply.BlockHeader.Reward
+		    out.OrphanStatus = reply.BlockHeader.OrphanStatus
+		  	return out, err
 	}
 	return nil, nil
 }
@@ -223,9 +254,12 @@ func (r *RPCClient) SubmitBlock(params []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	var reply bool
+	var reply *SubmitBlockReply
 	err = json.Unmarshal(*rpcResp.Result, &reply)
-	return reply, err
+	if reply.Status == "OK" {
+    return true, err
+  }
+	return false, err
 }
 
 func (r *RPCClient) GetBalance(address string) (*big.Int, error) {

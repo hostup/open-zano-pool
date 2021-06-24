@@ -21,6 +21,14 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	nonce, _ := strconv.ParseUint(strings.Replace(nonceHex, "0x", "", -1), 16, 64)
 	shareDiff := s.config.Proxy.Difficulty
 
+	  tempNonce, _ := new(big.Int).SetString(nonceHex[2:], 16)
+	  tempNonceStr := []byte(fmt.Sprintf("%#018x", tempNonce)[2:])
+	  flipped := make([]byte, 16)
+	  for i := 0; i < 16; i += 2 {
+	    flipped[16 - i - 1] = tempNonceStr[i + 1]
+	    flipped[16 - i - 2] = tempNonceStr[i]
+	  }
+
 	h, ok := t.headers[hashNoNonce]
 	if !ok {
 		//TODO:Store stale share in Redis
@@ -78,7 +86,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
   }
 
 	if *good_block {
-    params := []string{t.Blob[2:4] + nonceHex[2:] + t.Blob[20:]}
+    params := []string{t.Blob[2:4] + string(flipped) + t.Blob[20:]}
 		ok, err := s.rpc().SubmitBlock(params)
 		if err != nil {
 			log.Printf("Block submission failure at height %v for %v: %v", h.height, t.Header, err)
@@ -87,7 +95,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 			return false, false
 		} else {
 			s.fetchBlockTemplate()
-			exist, err := s.backend.WriteBlock(login, id, params, shareDiff, h.diff.Int64(), h.height, s.hashrateExpiration)
+			exist, err := s.backend.WriteBlock(login, id, block_params[:3], shareDiff, h.diff.Int64(), h.height, s.hashrateExpiration)
 			if exist {
 
                                 return true, false
@@ -100,7 +108,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 			log.Printf("Block found by miner %v@%v at height %d", login, ip, h.height)
 		}
 	} else {
-		exist, err := s.backend.WriteShare(login, id, params, shareDiff, h.height, s.hashrateExpiration)
+		exist, err := s.backend.WriteShare(login, id, share_params[:3], shareDiff, h.height, s.hashrateExpiration)
 		if exist {
 			return true, false
 		}

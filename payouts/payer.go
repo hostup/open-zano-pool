@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+  "strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -109,7 +110,8 @@ func (u *PayoutsProcessor) Start() {
 }
 
 func (u *PayoutsProcessor) process() {
-	if u.halt {
+	baseFee := uint64(10000000000)
+  if u.halt {
 		log.Println("Payments suspended due to last critical error:", u.lastFail)
 		return
 	}
@@ -121,6 +123,18 @@ func (u *PayoutsProcessor) process() {
 		log.Println("Error while retrieving payees from backend:", err)
 		return
 	}
+
+	xferdests := []rpc.TransferDestination{}
+  integdests := make(map[string]rpc.TransferDestination)
+  tempAmounts := make(map[string]int64)
+  tempAmountsIntegrated := make(map[string]int64)
+  totalPayoutInWei := new(big.Int).SetInt64(0)
+  poolBalance, err := u.rpc_wallet.GetBalance()
+  if err != nil {
+      u.halt = true
+      u.lastFail = err
+      return
+  }
 
 	for _, login := range payees {
 		amount, _ := u.backend.GetBalance(login)
@@ -144,40 +158,6 @@ func (u *PayoutsProcessor) process() {
 			break
 		}
 
-		// Check if we have enough funds
-		poolBalance, err := u.rpc_wallet.GetBalance()
-		if err != nil {
-			u.halt = true
-			u.lastFail = err
-			break
-		}
-		if poolBalance.Cmp(amountInWei) < 0 {
-			err := fmt.Errorf("Not enough balance for payment, need %s pZano, pool has %s pZano",
-				amountInWei.String(), poolBalance.String())
-			u.halt = true
-			u.lastFail = err
-			break
-		}
-
-		// Lock payments for current payout
-		err = u.backend.LockPayouts(login, amount)
-		if err != nil {
-			log.Printf("Failed to lock payment for %s: %v", login, err)
-			u.halt = true
-			u.lastFail = err
-			break
-		}
-		log.Printf("Locked payment for %s, %v Shannon", login, amount)
-
-		// Debit miner's balance and update stats
-		err = u.backend.UpdateBalance(login, amount)
-		if err != nil {
-			log.Printf("Failed to update balance for %s, %v Shannon: %v", login, amount, err)
-			u.halt = true
-			u.lastFail = err
-			break
-		}
-
 		//Calculate the Gas Price in Wei and Computer the Transaction Charges
 		//Since pool honour only mining to wallet and not to contract, Deduct value equal to gas*21000 - Standard cost price
 
@@ -193,52 +173,134 @@ func (u *PayoutsProcessor) process() {
 		}
 
 		value := amountInWei.Uint64()
+    totalPayoutInWei.Add(totalPayoutInWei, amountInWei)
     var xferdest rpc.TransferDestination
     xferdest.Amount = value
     xferdest.Address = login
-		txHash, err := u.rpc_wallet.SendTransaction([]rpc.TransferDestination{xferdest}, 10000000000, 0)
+		if strings.HasPrefix(login, "iZ") || strings.HasPrefix(login, "aiZX") {
+      tempAmountsIntegrated[login] = amount
+      // go ahead and remove the tx fee here
+      xferdest.Amount = xferdest.Amount - baseFee
+      integdests[login] = xferdest
+    } else {
+      tempAmounts[login] = amount
+      xferdests = append(xferdests, xferdest)
+    }
+	}
 
-		if err != nil {
-			log.Printf("Failed to send payment to %s, %v Shannon: %v. Check outgoing tx for %s in block explorer and docs/PAYOUTS.md",
-				login, amount, err, login)
+	if mustPay > 0 {
+    if poolBalance.Cmp(totalPayoutInWei) < 0 {
+      err := fmt.Errorf("Not enough balance for payment, need %s pZano, pool has %s pZano",
+      totalPayoutInWei.String(), poolBalance.String())
+      u.halt = true
+      u.lastFail = err
+      return
+    }
+		TxCharges := big.NewInt(0)
+		// split the tx fee evenly over all bulk-tx recipients
+    // those first in line are a little unlucky
+		if len(tempAmounts) > 0 {
+      nPayees := uint64(len(xferdests))
+      feePerPayee := baseFee / nPayees
+      feeRemainder := int64(baseFee % nPayees)
+      for k := 0; k < len(xferdests); k++ {
+        extra := uint64(0)
+        if feeRemainder > 0 {
+          extra = 1
+          feeRemainder = feeRemainder - 1
+        }
+        xferdests[k].Amount = xferdests[k].Amount - feePerPayee - extra
+      }
+
+      txHash, err := u.rpc_wallet.SendTransaction(xferdests, baseFee, 0)
+      if err != nil {
+			log.Printf("Failed to send payment to %v. Check outgoing tx for %s in block explorer and docs/PAYOUTS.md",
+				xferdests, txHash)
 			u.halt = true
 			u.lastFail = err
-			break
+			return
 		}
+		for login, amount := range tempAmounts {
+			// Lock payments for current payout
+			err = u.backend.LockPayouts(login, amount)
+			if err != nil {
+				log.Printf("Failed to lock payment for %s: %v", login, err)
+				u.halt = true
+				u.lastFail = err
+				break
+			}
+			log.Printf("Locked payment for %s, %v Shannon", login, amount)
 
-		// Log transaction hash
-		err = u.backend.WritePayment(login, txHash, amount, TxCharges.Int64())
-		if err != nil {
-			log.Printf("Failed to log payment data for %s, %v Shannon, tx: %s: %v", login, amount, txHash, err)
-			u.halt = true
-			u.lastFail = err
+			// Debit miner's balance and update stats
+			err = u.backend.UpdateBalance(login, amount)
+			if err != nil {
+				log.Printf("Failed to update balance for %s, %v Shannon: %v", login, amount, err)
+				u.halt = true
+				u.lastFail = err
+				break
+			}
+
+			// Log transaction hash
+			err = u.backend.WritePayment(login, txHash, amount, TxCharges.Int64())
+			if err != nil {
+				log.Printf("Failed to log payment data for %s, %v Shannon, tx: %s: %v", login, amount, txHash, err)
+				u.halt = true
+				u.lastFail = err
 			break
 		}
 
 		minersPaid++
 		totalAmount.Add(totalAmount, big.NewInt(amount))
-		log.Printf("Paid %v Shannon to %v, TxHash: %v, Transaction Charges : %v", amountInWei, login, txHash, TxCharges.Int64())
-
-		// Wait for TX confirmation before further payouts
-		for {
-			log.Printf("Waiting for tx confirmation: %v", txHash)
-			time.Sleep(txCheckInterval)
-			receipt, err := u.rpc_wallet.GetTxReceipt(txHash)
-			if err != nil {
-				log.Printf("Failed to get tx receipt for %v: %v", txHash, err)
-				continue
-			}
-			// Tx has been mined
-			if receipt != nil && receipt.Confirmed() {
-				if receipt.Successful() {
-					log.Printf("Payout tx successful for %s: %s", login, txHash)
-				} else {
-					log.Printf("Payout tx failed for %s: %s. Address contract throws on incoming tx.", login, txHash)
-				}
-				break
-			}
-		}
+		log.Printf("Paid %v Shannon to Standard Address: %v, TxHash: %v, Transaction Charges : %v", amount, login, txHash, TxCharges.Int64())
 	}
+}
+
+		    for login, amount := range tempAmountsIntegrated {
+		      // Lock payments for current payout
+		      err = u.backend.LockPayouts(login, amount)
+		      if err != nil {
+		        log.Printf("Failed to lock payment for %s: %v", login, err)
+		        u.halt = true
+		        u.lastFail = err
+		        break
+		      }
+		      log.Printf("Locked payment for %s, %v Shannon", login, amount)
+
+					// Debit miner's balance and update stats
+		      err = u.backend.UpdateBalance(login, amount)
+		      if err != nil {
+        log.Printf("Failed to update balance for %s, %v Shannon: %v", login, amount, err)
+		        u.halt = true
+		        u.lastFail = err
+		        break
+		      }
+
+					integdest := integdests[login]
+		      txHash, err := u.rpc_wallet.SendTransaction([]rpc.TransferDestination{integdest}, baseFee, 0)
+		      if err != nil {
+						log.Printf("Failed to send payment to %v. Check outgoing tx for %s in block explorer and docs/PAYOUTS.md",
+		          integdest, txHash)
+		        u.halt = true
+		        u.lastFail = err
+		        return
+		      }
+
+		      // Log transaction hash
+		      err = u.backend.WritePayment(login, txHash, amount, TxCharges.Int64())
+		      if err != nil {
+		        log.Printf("Failed to log payment data for %s, %v Shannon, tx: %s: %v, Transaction Charges : %v", login, amount, txHash, err, TxCharges.Int64())
+		       u.halt = true
+		       u.lastFail = err
+		       break
+		     }
+
+		      minersPaid++
+		      totalAmount.Add(totalAmount, big.NewInt(amount))
+		      log.Printf("Paid %v Shannon to Integrated Address: %v, TxHash: %v", amount, login, txHash)
+		    }
+		  }
+
+
 
 	if mustPay > 0 {
 		log.Printf("Paid total %v Shannon to %v of %v payees", totalAmount, minersPaid, mustPay)

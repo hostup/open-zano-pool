@@ -362,7 +362,7 @@ Configuration is actually simple, just read it twice and think twice before chan
 //Register account with NewRelic and update the parameters here
 	"newrelicEnabled": false,
 	"newrelicName": "PROXY01_ETH_MUMBAI",
-	"newrelicKey": "b30cd005408cbe2bcef6e081dc0a7ea2fe6c6a18",
+	"newrelicKey": "b71dca87-1476-4a19-a026-2656a954c369",
 	"newrelicVerbose": false
 }
 

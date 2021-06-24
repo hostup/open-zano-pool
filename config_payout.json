@@ -103,18 +103,19 @@
 
 	"payouts": {
 		"enabled": true,
-		"requirePeers": 5,
-		"interval": "180m",
+		"requirePeers": 1,
+		"interval": "1m",
 		"daemon": "http://127.0.0.1:11211/json_rpc",
+                "wallet": "http://127.0.0.1:11212/json_rpc",
 		"timeout": "10s",
 		"address": "ZxCwg6nmW8QPoa6qZomGwXhP4eUcCLN3waKtyTZkKtsyC9rZwPGo7LC1CGnURw3rPvLzuje86fPNTVZmEJUt6gvR3AhkohMHY",
 		"gas": "21000",
 		"gasPrice": "10000000000",
-		"autoGas": false,
-		"keepNwFees": true,
+		"autoGas": true,
+		"keepNwFees": false,
 		"nwTxGas": "21000",
 		"nwTxGasPrice": "10000000000",
-		"threshold": 10000000,
+		"threshold": 100000,
 		"bgsave": false
 	},
 
@@ -127,6 +128,6 @@
 
 	"newrelicEnabled": false,
 	"newrelicName": "PROXY01_ETH_MUMBAI",
-	"newrelicKey": "b30cd005408cbe2bcef6e081dc0a7ea2fe6c6a18",
+	"newrelicKey": "b71dca87-1476-4a19-a026-2656a954c369",
 	"newrelicVerbose": false
 }

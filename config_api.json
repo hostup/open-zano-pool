@@ -120,7 +120,7 @@
 
 	"exchange": {
 		"enabled": true,
-		"url": "https://api.coinmarketcap.com/v1/ticker/ethereum/?convert=INR",
+		"url": "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=zano",
 		"timeout": "50s",
 		"refreshInterval": "1800s"
 	},

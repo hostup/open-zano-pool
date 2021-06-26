@@ -48,8 +48,7 @@ type Session struct {
 
 	// Stratum
 	sync.Mutex
-	conn           *net.TCPConn
-	sslconn        net.Conn
+	conn           net.Conn
 	login          string
 	subscriptionID string
 	JobDeatils     jobDetails
@@ -82,11 +81,6 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 	if cfg.Proxy.Stratum.Enabled {
 		proxy.sessions = make(map[*Session]struct{})
 		go proxy.ListenTCP()
-	}
-
-	if cfg.Proxy.StratumSSL.Enabled {
-		proxy.sessions = make(map[*Session]struct{})
-		go proxy.ListenSSLTCP()
 	}
 
 	if cfg.Proxy.StratumNiceHash.Enabled {

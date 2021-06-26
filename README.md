@@ -269,7 +269,7 @@ Configuration is actually simple, just read it twice and think twice before chan
 	"upstream": [
 		//Node 1
 		{
-			"name": "mumbai",
+			"name": "main",
 			"url": "http://localhost:11211/json_rpc",
 			"timeout": "10s"
 		},
@@ -361,7 +361,7 @@ Configuration is actually simple, just read it twice and think twice before chan
 //If you want to use the NewRelic to monitor the server status and the internal status,
 //Register account with NewRelic and update the parameters here
 	"newrelicEnabled": false,
-	"newrelicName": "PROXY01_ETH_MUMBAI",
+	"newrelicName": "PROXY01_ETH_main",
 	"newrelicKey": "b71dca87-1476-4a19-a026-2656a954c369",
 	"newrelicVerbose": false
 }

@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
@@ -9,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/hostup/open-zano-pool/util"
+	"github.com/zano-mining/open-zano-pool/util"
 )
 
 const (
@@ -17,14 +18,21 @@ const (
 )
 
 func (s *ProxyServer) ListenTCP() {
-	timeout := util.MustParseDuration(s.config.Proxy.Stratum.Timeout)
-	s.timeout = timeout
+	s.timeout = util.MustParseDuration(s.config.Proxy.Stratum.Timeout)
 
-	addr, err := net.ResolveTCPAddr("tcp", s.config.Proxy.Stratum.Listen)
-	if err != nil {
-		log.Fatalf("Error: %v", err)
+	var err error
+	var server net.Listener
+	if s.config.Proxy.Stratum.TLS {
+		var cert tls.Certificate
+		cert, err = tls.LoadX509KeyPair(s.config.Proxy.Stratum.CertFile, s.config.Proxy.Stratum.KeyFile)
+		if err != nil {
+			log.Fatalln("Error loading certificate:", err)
+		}
+		tlsCfg := &tls.Config{Certificates: []tls.Certificate{cert}}
+		server, err = tls.Listen("tcp", s.config.Proxy.Stratum.Listen, tlsCfg)
+	} else {
+		server, err = net.Listen("tcp", s.config.Proxy.Stratum.Listen)
 	}
-	server, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -35,12 +43,10 @@ func (s *ProxyServer) ListenTCP() {
 	n := 0
 
 	for {
-		conn, err := server.AcceptTCP()
+		conn, err := server.Accept()
 		if err != nil {
 			continue
 		}
-		conn.SetKeepAlive(true)
-
 		ip, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
 
 		if s.policy.IsBanned(ip) || !s.policy.ApplyLimitPolicy(ip) {
@@ -169,7 +175,7 @@ func (cs *Session) sendTCPError(id json.RawMessage, reply *ErrorReply) error {
 	return errors.New(reply.Message)
 }
 
-func (self *ProxyServer) setDeadline(conn *net.TCPConn) {
+func (self *ProxyServer) setDeadline(conn net.Conn) {
 	conn.SetDeadline(time.Now().Add(self.timeout))
 }
 
@@ -196,7 +202,7 @@ func (s *ProxyServer) broadcastNewJobs() {
 	defer s.sessionsMu.RUnlock()
 
 	count := len(s.sessions)
-	log.Printf("Broadcasting new job to %v stratum miners", count)
+	log.Printf("Broadcasting new job to %v stratum	tls miners", count)
 
 	start := time.Now()
 	bcast := make(chan int, 1024)

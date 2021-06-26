@@ -104,7 +104,7 @@
 	"payouts": {
 		"enabled": true,
 		"requirePeers": 1,
-		"interval": "1m",
+		"interval": "5s",
 		"daemon": "http://127.0.0.1:11211/json_rpc",
                 "wallet": "http://127.0.0.1:11212/json_rpc",
 		"timeout": "10s",

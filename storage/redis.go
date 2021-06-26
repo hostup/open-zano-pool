@@ -692,7 +692,7 @@ func (r *RedisClient) RollbackBalance(login string, amount int64) error {
 	return err
 }
 
-func (r *RedisClient) WritePayment(login, txHash string, amount int64, txCharges int64) error {
+func (r *RedisClient) WritePayment(login, txHash string, amount int64) error {
 	tx := r.client.Multi()
 	defer tx.Close()
 
@@ -703,10 +703,9 @@ func (r *RedisClient) WritePayment(login, txHash string, amount int64, txCharges
 		tx.HIncrBy(r.formatKey("miners", login), "paid", amount)
 		tx.HIncrBy(r.formatKey("finances"), "pending", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "paid", amount)
-		tx.HIncrBy(r.formatKey("finances"), "txcharges", txCharges)
 
-		tx.ZAdd(r.formatKey("payments", "all"), redis.Z{Score: float64(ts), Member: join(txHash, login, amount, txCharges)})
-		tx.ZAdd(r.formatKey("payments", login), redis.Z{Score: float64(ts), Member: join(txHash, amount, txCharges)})
+		tx.ZAdd(r.formatKey("payments", "all"), redis.Z{Score: float64(ts), Member: join(txHash, login, amount)})
+		tx.ZAdd(r.formatKey("payments", login), redis.Z{Score: float64(ts), Member: join(txHash, amount)})
 		tx.ZRem(r.formatKey("payments", "pending"), join(login, amount))
 		tx.Del(r.formatKey("payments", "lock"))
 		return nil

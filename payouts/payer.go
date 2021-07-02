@@ -196,6 +196,7 @@ func (u *PayoutsProcessor) process() {
       u.lastFail = err
       return
     }
+		TxCharges := big.NewInt(0)
 		// split the tx fee evenly over all bulk-tx recipients
     // those first in line are a little unlucky
 		if len(tempAmounts) > 0 {
@@ -240,7 +241,7 @@ func (u *PayoutsProcessor) process() {
 			}
 
 			// Log transaction hash
-			err = u.backend.WritePayment(login, txHash, amount)
+			err = u.backend.WritePayment(login, txHash, amount, TxCharges.Int64())
 			if err != nil {
 				log.Printf("Failed to log payment data for %s, %v Shannon, tx: %s: %v", login, amount, txHash, err)
 				u.halt = true
@@ -250,7 +251,7 @@ func (u *PayoutsProcessor) process() {
 
 		minersPaid++
 		totalAmount.Add(totalAmount, big.NewInt(amount))
-		log.Printf("Paid %v Shannon to Standard Address: %v, TxHash: %v", amount, login, txHash)
+		log.Printf("Paid %v Shannon to Standard Address: %v, TxHash: %v, Transaction Charges : %v", amount, login, txHash, TxCharges.Int64())
 	}
 }
 
@@ -285,9 +286,9 @@ func (u *PayoutsProcessor) process() {
 		      }
 
 		      // Log transaction hash
-		      err = u.backend.WritePayment(login, txHash, amount)
+		      err = u.backend.WritePayment(login, txHash, amount, TxCharges.Int64())
 		      if err != nil {
-		        log.Printf("Failed to log payment data for %s, %v Shannon, tx: %s: %v", login, amount, txHash, err)
+		        log.Printf("Failed to log payment data for %s, %v Shannon, tx: %s: %v, Transaction Charges : %v", login, amount, txHash, err, TxCharges.Int64())
 		       u.halt = true
 		       u.lastFail = err
 		       break

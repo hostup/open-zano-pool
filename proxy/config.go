@@ -52,7 +52,7 @@ type Proxy struct {
 	Stratum    Stratum    `json:"stratum"`
 	StratumSSL StratumSSL `json:"stratum_ssl"`
 
-	StratumNiceHash StratumNiceHash `json:"stratum_nice_hash"`
+	StratumRegular StratumRegular `json:"stratum_nice_hash"`
 }
 
 type Stratum struct {
@@ -74,7 +74,7 @@ type StratumSSL struct {
 	CertKey  string `json:"certkey"`
 }
 
-type StratumNiceHash struct {
+type StratumRegular struct {
 	Enabled bool   `json:"enabled"`
 	Listen  string `json:"listen"`
 	Timeout string `json:"timeout"`

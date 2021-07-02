@@ -108,7 +108,7 @@ func (s *ProxyServer) fetchBlockTemplate() {
 		go s.broadcastNewJobs()
 	}
 
-	if s.config.Proxy.StratumNiceHash.Enabled {
+	if s.config.Proxy.StratumRegular.Enabled {
 		go s.broadcastNewJobsNH()
 	}
 }

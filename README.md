@@ -25,7 +25,7 @@ Highly Efficient mining pool designed for Ethash based coins
 *	The Network fees can be configured to be withheld for every transfers.
 *	The gas can be set as Auto and made to deduct automatically or can be fixed by the pool operator
 *	Many parameters configurable using config file
-*	Nicehash support *Not tested
+*	Regular support *Not tested
 *	SSL Support built-in
 *	Very attractive frontend with more detailed statistics
 

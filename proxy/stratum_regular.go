@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"bufio"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
@@ -13,45 +12,30 @@ import (
 	"github.com/zano-mining/open-zano-pool/util"
 )
 
-const (
-	MaxReqSize = 1024
-)
+func (s *ProxyServer) ListenRegularTCP() {
+	timeout := util.MustParseDuration(s.config.Proxy.StratumRegular.Timeout)
+	s.timeout = timeout
 
-func (s *ProxyServer) ListenTCP() {
-	s.timeout = util.MustParseDuration(s.config.Proxy.Stratum.Timeout)
-
-	var err error
-	var server net.Listener
-	setKeepAlive := func(net.Conn) {}
-	if s.config.Proxy.Stratum.TLS {
-		var cert tls.Certificate
-		cert, err = tls.LoadX509KeyPair(s.config.Proxy.Stratum.CertFile, s.config.Proxy.Stratum.KeyFile)
-		if err != nil {
-			log.Fatalln("Error loading certificate:", err)
-		}
-		tlsCfg := &tls.Config{Certificates: []tls.Certificate{cert}}
-		server, err = tls.Listen("tcp", s.config.Proxy.Stratum.Listen, tlsCfg)
-	} else {
-		server, err = net.Listen("tcp", s.config.Proxy.Stratum.Listen)
-		setKeepAlive = func(conn net.Conn) {
-		conn.(*net.TCPConn).SetKeepAlive(true)
-}
+	addr, err := net.ResolveTCPAddr("tcp4", s.config.Proxy.StratumRegular.Listen)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
 	}
+	server, err := net.ListenTCP("tcp4", addr)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 	defer server.Close()
 
-	log.Printf("Stratum listening on %s", s.config.Proxy.Stratum.Listen)
-	var accept = make(chan int, s.config.Proxy.Stratum.MaxConn)
+	log.Printf("Stratum regular listening on %s", s.config.Proxy.StratumRegular.Listen)
+	var accept = make(chan int, s.config.Proxy.StratumRegular.MaxConn)
 	n := 0
 
 	for {
-		conn, err := server.Accept()
+		conn, err := server.AcceptTCP()
 		if err != nil {
 			continue
 		}
-		setKeepAlive(conn)
+		conn.SetKeepAlive(true)
 
 		ip, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
 
@@ -64,7 +48,7 @@ func (s *ProxyServer) ListenTCP() {
 
 		accept <- n
 		go func(cs *Session) {
-			err = s.handleTCPClient(cs)
+			err = s.handleNHTCPClient(cs)
 			if err != nil {
 				s.removeSession(cs)
 				conn.Close()
@@ -74,7 +58,7 @@ func (s *ProxyServer) ListenTCP() {
 	}
 }
 
-func (s *ProxyServer) handleTCPClient(cs *Session) error {
+func (s *ProxyServer) handleNHTCPClient(cs *Session) error {
 	cs.enc = json.NewEncoder(cs.conn)
 	connbuff := bufio.NewReaderSize(cs.conn, MaxReqSize)
 	s.setDeadline(cs.conn)
@@ -103,7 +87,7 @@ func (s *ProxyServer) handleTCPClient(cs *Session) error {
 				return err
 			}
 			s.setDeadline(cs.conn)
-			err = cs.handleTCPMessage(s, &req)
+			err = cs.handleNHTCPMessage(s, &req)
 			if err != nil {
 				return err
 			}
@@ -112,7 +96,7 @@ func (s *ProxyServer) handleTCPClient(cs *Session) error {
 	return nil
 }
 
-func (cs *Session) handleTCPMessage(s *ProxyServer, req *StratumReq) error {
+func (cs *Session) handleNHTCPMessage(s *ProxyServer, req *StratumReq) error {
 	// Handle RPC methods
 	switch req.Method {
 	case "eth_submitLogin":
@@ -153,7 +137,7 @@ func (cs *Session) handleTCPMessage(s *ProxyServer, req *StratumReq) error {
 	}
 }
 
-func (cs *Session) sendTCPResult(id json.RawMessage, result interface{}) error {
+func (cs *Session) sendTCPNHResult(id json.RawMessage, result interface{}) error {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -161,7 +145,7 @@ func (cs *Session) sendTCPResult(id json.RawMessage, result interface{}) error {
 	return cs.enc.Encode(&message)
 }
 
-func (cs *Session) pushNewJob(result interface{}) error {
+func (cs *Session) sendJob(result interface{}) error {
 	cs.Lock()
 	defer cs.Unlock()
 	// FIXME: Temporarily add ID for Claymore compliance
@@ -169,7 +153,7 @@ func (cs *Session) pushNewJob(result interface{}) error {
 	return cs.enc.Encode(&message)
 }
 
-func (cs *Session) sendTCPError(id json.RawMessage, reply *ErrorReply) error {
+func (cs *Session) sendTCPNHError(id json.RawMessage, reply *ErrorReply) error {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -181,23 +165,19 @@ func (cs *Session) sendTCPError(id json.RawMessage, reply *ErrorReply) error {
 	return errors.New(reply.Message)
 }
 
-func (self *ProxyServer) setDeadline(conn net.Conn) {
-	conn.SetDeadline(time.Now().Add(self.timeout))
-}
-
-func (s *ProxyServer) registerSession(cs *Session) {
+func (s *ProxyServer) registerSessionRegular(cs *Session) {
 	s.sessionsMu.Lock()
 	defer s.sessionsMu.Unlock()
 	s.sessions[cs] = struct{}{}
 }
 
-func (s *ProxyServer) removeSession(cs *Session) {
+func (s *ProxyServer) removeSessionRegular(cs *Session) {
 	s.sessionsMu.Lock()
 	defer s.sessionsMu.Unlock()
 	delete(s.sessions, cs)
 }
 
-func (s *ProxyServer) broadcastNewJobs() {
+func (s *ProxyServer) broadcastNewJobsNH() {
 	t := s.currentBlockTemplate()
 	if t == nil || len(t.Header) == 0 || s.isSick() {
 		return
@@ -207,9 +187,7 @@ func (s *ProxyServer) broadcastNewJobs() {
 	s.sessionsMu.RLock()
 	defer s.sessionsMu.RUnlock()
 
-	count := len(s.sessions)
-	log.Printf("Total miners %v", count)
-	log.Printf("Broadcasting new job to tls miners")
+	log.Printf("Broadcasting new job to non tls miners")
 
 	start := time.Now()
 	bcast := make(chan int, 1024)

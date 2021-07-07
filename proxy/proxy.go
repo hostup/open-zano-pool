@@ -6,11 +6,10 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
+  "os"
 	"github.com/gorilla/mux"
 
 	"github.com/hostup/open-zano-pool/policy"
@@ -26,7 +25,6 @@ type ProxyServer struct {
 	upstreams          []*rpc.RPCClient
 	backend            *storage.RedisClient
 	diff               string
-	algorithm          string
 	policy             *policy.PolicyServer
 	hashrateExpiration time.Duration
 	failsCount         int64
@@ -35,19 +33,11 @@ type ProxyServer struct {
 	sessionsMu sync.RWMutex
 	sessions   map[*Session]struct{}
 	timeout    time.Duration
-	// Extranonce
-	Extranonces map[string]bool
+	Extranonce string
 }
 
 type jobDetails struct {
 	JobID      string
-	SeedHash   string
-	HeaderHash string
-	Height     string
-	Epoch      int64
-}
-
-type staleJob struct {
 	SeedHash   string
 	HeaderHash string
 }
@@ -58,20 +48,21 @@ type Session struct {
 
 	// Stratum
 	sync.Mutex
-	conn  net.Conn
-	login string
-
-	stratum        int
-	algorithm      string
+	conn           net.Conn
+	login          string
 	subscriptionID string
-	Extranonce     string
-	ExtranonceSub  bool
-	JobDetails     jobDetails
-	staleJobs      map[string]staleJob
-	staleJobIDs    []string
+	JobDeatils     jobDetails
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
+	address := os.Getenv(cfg.Proxy.Address)
+  if len(address) != 0 && !util.IsValidZanoAddress(address) {
+    log.Fatalln("Invalid Miner Address", address)
+  }
+  cfg.Proxy.Address = address
+
+	  log.Printf("Address %v %v", address, cfg.Proxy.Address)
+
 	if len(cfg.Name) == 0 {
 		log.Fatal("You must set instance name")
 	}
@@ -79,8 +70,6 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 
 	proxy := &ProxyServer{config: cfg, backend: backend, policy: policy}
 	proxy.diff = util.GetTargetHex(cfg.Proxy.Difficulty)
-
-		proxy.algorithm = "progpow"
 
 	proxy.upstreams = make([]*rpc.RPCClient, len(cfg.Upstream))
 	for i, v := range cfg.Upstream {
@@ -91,8 +80,12 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 
 	if cfg.Proxy.Stratum.Enabled {
 		proxy.sessions = make(map[*Session]struct{})
-		proxy.Extranonces = make(map[string]bool)
 		go proxy.ListenTCP()
+	}
+
+	if cfg.Proxy.StratumRegular.Enabled {
+		proxy.sessions = make(map[*Session]struct{})
+		go proxy.ListenRegularTCP()
 	}
 
 	proxy.fetchBlockTemplate()
@@ -154,8 +147,15 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 func (s *ProxyServer) Start() {
 	log.Printf("Starting proxy on %v", s.config.Proxy.Listen)
 	r := mux.NewRouter()
-	r.Handle("/{login:0x[0-9a-fA-F]{40}}/{id:[0-9a-zA-Z-_]{1,8}}", s)
-	r.Handle("/{login:0x[0-9a-fA-F]{40}}", s)
+	r.Handle("/{login:Zx[0-9a-zA-Z]{95,}$}/{id:[0-9a-zA-Z-_]{1,8}}", s)
+  r.Handle("/{login:iZ[0-9a-zA-Z]{95,}$}/{id:[0-9a-zA-Z-_]{1,8}}", s)
+  r.Handle("/{login:aZx[0-9a-zA-Z]{95,}$}/{id:[0-9a-zA-Z-_]{1,8}}", s)
+  r.Handle("/{login:aiZX[0-9a-zA-Z]{95,}$}/{id:[0-9a-zA-Z-_]{1,8}}", s)
+	r.Handle("/{login:Zx[0-9a-zA-Z]{95,}$}", s)
+  r.Handle("/{login:iZ[0-9a-zA-Z]{95,}$}", s)
+  r.Handle("/{login:aZx[0-9a-zA-Z]{95,}$}", s)
+  r.Handle("/{login:aiZX[0-9a-zA-Z]{95,}$}", s)
+
 	srv := &http.Server{
 		Addr:           s.config.Proxy.Listen,
 		Handler:        r,
@@ -244,15 +244,15 @@ func (cs *Session) handleMessage(s *ProxyServer, r *http.Request, req *JSONRpcRe
 	}
 
 	vars := mux.Vars(r)
-	login := strings.ToLower(vars["login"])
+	login := vars["login"]
 
-	if !util.IsValidHexAddress(login) {
+	if !util.IsValidZanoAddress(login) {
 		errReply := &ErrorReply{Code: -1, Message: "Invalid login"}
 		cs.sendError(req.Id, errReply)
 		return
 	}
 	if !s.policy.ApplyLoginPolicy(login, cs.ip) {
-		errReply := &ErrorReply{Code: -1, Message: "You are blacklisted"}
+		errReply := &ErrorReply{Code: -1, Message: "You are blacklisted, please contact helpdesk with your details"}
 		cs.sendError(req.Id, errReply)
 		return
 	}

@@ -13,7 +13,7 @@
 		"behindReverseProxy": false,
 		"blockRefreshInterval": "50ms",
 		"stateUpdateInterval": "3s",
-		"difficulty": 40000,
+		"difficulty": 40000000,
 		"hashrateExpiration": "3h",
     "address": "POOL_MINER_KEY",
 		"healthCheck": true,
@@ -24,7 +24,7 @@
 			"listen": "0.0.0.0:5555",
 			"timeout": "120s",
 			"maxConn": 8192,
-			"tls": true,
+			"tls": false,
 			"certfile": "/home/david/open-zano-pool/ssl/fullchain.pem",
 			"certkey": "/home/david/open-zano-pool/ssl/privkey.pem"
 					},

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zano-mining/open-zano-pool/util"
+	"github.com/hostup/open-zano-pool/util"
 )
 
 const (

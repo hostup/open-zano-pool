@@ -1,5 +1,4 @@
-# Ethash-mining-pool
-Highly Efficient mining pool designed for Ethash based coins
+Highly Efficient mining pool designed
 [![Build Status](https://travis-ci.org/hostup/open-zano-pool.svg?branch=V2.0_Eth)](https://travis-ci.org/hostup/open-zano-pool)
 
 
@@ -28,21 +27,6 @@ Highly Efficient mining pool designed for Ethash based coins
 *	Regular support *Not tested
 *	SSL Support built-in
 *	Very attractive frontend with more detailed statistics
-
-
-### Branches
-**Please clone the project using the branches as  per the coin
-
-* V2.0_Eth – Ethereum pool for go version <=1.10
-*	V2.0_Eth_11 -– Ethereum pool for go version >=1.11
-*	V2.0_Etc – Ethereum Classicpool for go version <=1.10
-*	V2.0_Exp – Expanse pool for go version <=1.10
-*	V2.0_Ubiq – Ubiq pool for go version <=1.10
-*	V2.0_Pirl – Pirl pool for go version <=1.10
-*	V2.0_Dbix – Dubai coin pool for go version <=1.10
-*	V2.0_Soil – Soil Coin pool for go version <=1.10
-*	V2.0_Mc – Music Coin pool for go version <=1.10
-*	V2.0_Nuko – Nuko coin - * Not implemented
 
 ### Architecture
 

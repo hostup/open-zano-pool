@@ -124,7 +124,15 @@ func (u *BlockUnlocker) unlockCandidates(candidates []*storage.BlockData) (*Unlo
 				continue
 			}
 
+			label1:
+			
 			block, err := u.rpc.GetBlockByHeight(height)
+			
+			if(strings.EqualFold(block.Hash, "0x0")) {
+				log.Printf("Enterring loop")
+				goto label1	
+			}
+			
 			if err != nil {
 				log.Printf("Error while retrieving block %v from node: %v", height, err)
 				return nil, err
@@ -133,7 +141,7 @@ func (u *BlockUnlocker) unlockCandidates(candidates []*storage.BlockData) (*Unlo
 				return nil, fmt.Errorf("Error while retrieving block %v from node, wrong node height", height)
 			}
 
-			if matchCandidate(block, candidate) {
+			if cmatch(block, candidate) {
 				orphan = false
 				result.blocks++
 
@@ -204,6 +212,16 @@ func matchCandidate(block *rpc.GetBlockReply, candidate *storage.BlockData) bool
 	if len(block.Nonce) > 0 {
 		return strings.EqualFold(block.Nonce, candidate.Nonce)
 	}
+
+	return false
+}
+
+
+func cmatch(block *rpc.GetBlockReply, candidate *storage.BlockData) bool {
+	// Just compare hash if block is unlocked as immature
+	if block.OrphanStatus == false {
+		return true
+	}
 	return false
 }
 
@@ -236,6 +254,10 @@ func handleUncle(height int64, uncle *rpc.GetBlockReply, candidate *storage.Bloc
 }
 
 func (u *BlockUnlocker) unlockPendingBlocks() {
+	
+	log.Printf("Starting Unlock")
+	
+	
 	if u.halt {
 		log.Println("Unlocking suspended due to last critical error:", u.lastFail)
 		return
@@ -355,7 +377,7 @@ func (u *BlockUnlocker) unlockAndCreditMiners() {
 
 	current, err := u.rpc.GetLatestBlock()
 	if err != nil {
-		//u.halt = true
+		u.halt = true
 		u.lastFail = err
 		log.Printf("Unable to get current blockchain height from node: %v", err)
 		return
